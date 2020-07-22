@@ -7,7 +7,7 @@
       :expand-on-click-node="false"
       show-checkbox
       node-key="catId"
-      :default-expanded-keys='expandedKeys'
+      :default-expanded-keys="expandedKeys"
     >
       <span class="custom-tree-node" slot-scope="{ node, data }">
         <span>{{ node.label }}</span>
@@ -22,6 +22,18 @@
         </span>
       </span>
     </el-tree>
+
+    <el-dialog title="提示" :visible.sync="dialogVisible" width="30%">
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addCategory">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -32,8 +44,16 @@ export default {
   props: {},
   data() {
     return {
+      category: {
+        name: "",
+        parentCid: 0,
+        catLevel: 0,
+        showStatus: 1,
+        sort: 0
+      },
+      dialogVisible: false,
       menus: [],
-      expandedKeys:[],
+      expandedKeys: [],
       defaultProps: {
         children: "children",
         label: "name"
@@ -43,6 +63,24 @@ export default {
   methods: {
     handleNodeClick(data) {
       console.log(data);
+    },
+    addCategory() {
+      console.log("提交分类名称", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false)
+      }).then(({ data }) => {
+        this.$message({
+              message: "菜单保存成功",
+              type: "success"
+            });
+            //关闭对话框
+        this.dialogVisible =false;
+        this.expandedKeys = [this.category.parentCid];
+        //刷新菜单
+        this.getMenus();
+      });
     },
     getMenus() {
       this.$http({
@@ -55,7 +93,10 @@ export default {
       });
     },
     append(data) {
-      //console.log("append",data)
+      console.log("append", data);
+      this.dialogVisible = true;
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
     },
 
     remove(node, data) {
@@ -77,7 +118,7 @@ export default {
               message: "菜单删除成功",
               type: "success"
             });
-            this.expandedKeys = [node.parent.data.catId]
+            this.expandedKeys = [node.parent.data.catId];
             this.getMenus();
           });
         })
